@@ -2,8 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>Wetty - The WebTTY Terminal Emulator</title>
+    <title>Maas Terminal</title>
     <script src="/wetty/socket.io/socket.io.js"></script>
+    <script>
+
+      var termVisibility = true;
+
+      function toggleTerm() {
+        termVisibility = termVisibility == false ? true : false;
+        if (termVisibility) {
+          document.getElementById("terminal").style.visibility= 'visible' ;
+          document.getElementById("editor").style.visibility= 'hidden' ;
+          
+        } else {
+          document.getElementById("terminal").style.visibility= 'hidden' ;
+          document.getElementById("editor").style.visibility= 'visible' ;
+          
+        }
+      }
+
+      function sshToTarget() {
+        let url = new URL(window.location.href);
+        let searchParams = new URLSearchParams(url.search);
+        term.io.sendString('ssh -i .ec2.pem ubuntu@' + searchParams.get('targetNode') + "\n");        
+        document.getElementById("terminal").focus();
+      }
+      function launchCLI() {
+        term.io.sendString('sudo docker exec -it solace bash -c "cd /usr/sw/loads/currentload/bin; cli -A" \n');
+        document.getElementById("terminal").focus();
+      }
+    </script>
+
     <style>
       html, body {
         height: 100%;
@@ -19,23 +48,62 @@
         z-index: 100;
       }
       #overlay input {
-        display: block;
+        display: inline;
         margin: auto;
         position: relative;
         top: 50%;
         transform: translateY(-50%);
       }
       #terminal {
+        top: 32px;
         display: block;
-        position: relative;
+        position: absolute;
         width: 100%;
-        height: 100%;
+        height: 90%;
+      }
+      #editor {
+        top: 32px;
+        display: block;
+        position: absolute;
+        width: 100%;
+        height: 90%;
+      }
+      #utilbtn {
+        display: inline-block;
+        vertical-align: top;
       }
     </style>
   </head>
   <body>
+    <div id="utilbtn"><input type="button" onclick="sshToTarget();" value="SSH to VMR"i/></div>
+    <div id="utilbtn"><input type="button" onclick="launchCLI();" value="VMR CLI"i/></div>
+    <div id="utilbtn"><input type="button" onclick="toggleTerm();" value="Toggle Notepad"i/></div>
+    
     <div id="overlay"><input type="button" onclick="location.reload();" value="reconnect" /></div>
+    
     <div id="terminal"></div>
     <script src="/wetty/wetty.min.js"></script>
+
+    <div id="editor" style="visibility: hidden">Take some notes..</div>
+    <script src="ace/src-min/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script src="ace/src-min/theme_tomorrow_night_blue.js" type="text/javascript" charset="utf-8"></script>
+    <script>
+        var editor = ace.edit("editor");
+        editor.setShowPrintMargin(false);
+        editor.setTheme("ace/theme/tomorrow_night_blue");
+        if (localStorage && localStorage.getItem('MaasTermNotes') != null) {
+          editor.session.setValue(localStorage.getItem('MaasTermNotes'));
+        }
+        editor.commands.addCommand({
+            name: 'save',
+            bindKey: {win: "Ctrl-S", "mac": "Cmd-S"},
+            exec: function(editor) {
+                console.log("Saving edits to local storage.", editor.session.getValue())
+                localStorage.setItem("MaasTermNotes", editor.getValue())
+            }
+        })
+
+    </script>
+
   </body>
 </html>

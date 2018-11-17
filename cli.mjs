@@ -58,14 +58,26 @@ const sshport = opts.sshport || process.env.SSHPORT || 22;
 const sshkey  = opts.sshkey  || process.env.SSHKEY  || '';
 const port = opts.port || process.env.PORT || 3000;
 
+var tty
 loadSSL(opts)
   .then(ssl => {
     opts.ssl = ssl;
+
+
+tty = wetty(port, sshuser, sshhost, sshport, sshauth, sshkey, opts.ssl);
+tty.on('exit', code => {
+  console.log(`exit with code: ${code}`);
+});
+tty.on('disconnect', () => {
+  console.log('disconnect');
+});
+
   })
   .catch(err => {
     console.error(`Error: ${err}`);
     process.exit(1);
   });
+
 
 const sshkeyWarning =
 `!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -81,30 +93,25 @@ process.on('uncaughtException', err => {
   console.error(`Error: ${err}`);
 });
 
-const tty = wetty(port, sshuser, sshhost, sshport, sshauth, sshkey, opts.ssl);
-tty.on('exit', code => {
-  console.log(`exit with code: ${code}`);
-});
-tty.on('disconnect', () => {
-  console.log('disconnect');
-});
 
 function loadSSL({ sslkey, sslcert }) {
   return new Promise((resolve, reject) => {
-    const ssl = {};
+    var ssl = {};
     if (sslkey && sslcert) {
       fs
         .readFile(path.resolve(sslkey))
         .then(key => {
           ssl.key = key;
-        })
-        .then(fs.readFile(path.resolve(sslcert)))
-        .then(cert => {
-          ssl.cert = cert;
-        })
-        .then(resolve(ssl))
-        .catch(reject);
+
+          fs.readFile(path.resolve(sslcert))
+           .then(cert => {
+             ssl.cert = cert;
+             resolve(ssl)
+           }).catch(err => {
+             console.log("ERROR: " + err);
+             reject
+           });
+      });
     }
-    resolve(ssl);
   });
 }

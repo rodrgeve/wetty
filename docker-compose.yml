@@ -3,13 +3,13 @@ version: "3"
 services:
   wetty:
     build: .
-    image: butlerx/wetty
+    image: rgeve/wetty:latest
     container_name: wetty
     tty: true
     working_dir: /app
     ports:
-      - "3000:3000"
+      - "8088:3000"
     environment:
       PORT: 3000
-      SSHHOST: 'localhost'
-      SSHPORT: 22
+#      SSHHOST: 'localhost'
+#      SSHPORT: 22
