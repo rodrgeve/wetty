@@ -13,11 +13,13 @@
         if (termVisibility) {
           document.getElementById("terminal").style.visibility= 'visible' ;
           document.getElementById("editor").style.visibility= 'hidden' ;
+          document.getElementById("terminal").focus();
           
         } else {
           document.getElementById("terminal").style.visibility= 'hidden' ;
           document.getElementById("editor").style.visibility= 'visible' ;
-          
+          document.getElementById("editor").focus();
+          editor.focus();
         }
       }
 
@@ -98,11 +100,47 @@
             name: 'save',
             bindKey: {win: "Ctrl-S", "mac": "Cmd-S"},
             exec: function(editor) {
-                console.log("Saving edits to local storage.", editor.session.getValue())
-                localStorage.setItem("MaasTermNotes", editor.getValue())
+              console.log("Saving edits to local storage.", editor.session.getValue())
+              localStorage.setItem("MaasTermNotes", editor.getValue())
             }
         })
-
+        editor.commands.addCommand({
+            name: 'openURL',
+            bindKey: {win: "Ctrl-O", "mac": "Cmd-O"},
+            exec: function(editor) {
+              var selectedText = editor.getSession().doc.getTextRange(editor.selection.getRange());
+              const isUrl = string => {
+                try { 
+                  return Boolean(new URL(string)); }
+                catch(e) {
+                  return false; 
+                }
+              }
+              var destination = selectedText
+              if (! isUrl(selectedText)) {
+                // Do Google Search
+                destination = "https://google.com/search?q=" + encodeURI(selectedText);
+              }
+              var win = window.open(destination, '_blank');
+              win.focus();
+            }
+        })
+        editor.commands.addCommand({
+            name: 'execInTerm',
+            bindKey: {win: "Ctrl-E", "mac": "Cmd-E"},
+            exec: function(editor) {
+              var selectedText = editor.getSession().doc.getTextRange(editor.selection.getRange());
+              toggleTerm();
+              term.io.sendString(selectedText + "\n");        
+            }
+        })
+        editor.commands.addCommand({
+            name: 'toggleToTerm',
+            bindKey: {win: "Ctrl-T", "mac": "Cmd-T"},
+            exec: function(editor) {
+              toggleTerm();
+            }
+        })
     </script>
 
   </body>
