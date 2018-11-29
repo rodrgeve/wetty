@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env /bin/bash
 
 userAtAddress="$1"; shift
 USER=$(echo "$userAtAddress" | cut -d"@" -f1);

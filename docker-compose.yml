@@ -7,9 +7,10 @@ services:
     container_name: wetty
     tty: true
     working_dir: /app
+    volumes:
+      - ./termdata:/app/termdata
+      - ./public:/app/public
     ports:
       - "8088:3000"
     environment:
       PORT: 3000
-#      SSHHOST: 'localhost'
-#      SSHPORT: 22

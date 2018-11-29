@@ -6,8 +6,12 @@ import server from 'socket.io';
 import { spawn } from 'node-pty';
 import EventEmitter from 'events';
 import favicon from 'serve-favicon';
+const fs = require('fs');
+const process = require('process');
 
 const app = express();
+const workingDir = process.cwd();
+
 app.use(favicon(`${__dirname}/public/favicon.ico`));
 // For using wetty at /wetty on a vhost
 app.get('/wetty/ssh/:user', (req, res) => {
@@ -23,8 +27,33 @@ app.get('/ssh/:user', (req, res) => {
 app.get('/', (req, res) => {
   res.sendFile(`${__dirname}/public/wetty/index.html`);
 });
+
+app.post('/savefile/:fileName', (req, res) => {
+  var body = '';
+  
+  var filePath = workingDir 
+    + "/termdata/"
+    + req.params.fileName.replace('%2f', '/');
+
+  console.log("Saving contents for file: " + filePath);
+  
+  req.on('data', function(data) {
+      body += data;
+  });
+
+  req.on('end', function (){
+    fs.writeFile(filePath, body, function() {
+      res.end();
+    });
+  });
+});
+
 // For serving css and javascript
 app.use('/', express.static(path.join(__dirname, 'public')));
+
+app.get('/maas/', (req, res) => {
+  res.sendFile(`${__dirname}/termdata/maas.conf`);
+});
 
 function createServer(port, sslopts) {
   return sslopts && sslopts.key && sslopts.cert
