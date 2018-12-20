@@ -3,222 +3,29 @@
   <head>
     <meta charset="UTF-8">
     <title>Maas Terminal</title>
-    <script src="/wetty/socket.io/socket.io.js"></script>
-    <script src="/tippyjs/tippy.all.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.12/handlebars.min.js"></script>
-
-
-    <!-- file-browser section -->
+    
+    <!-- file-browser includes -->
     <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
     <script src="/file-browser/jquery.min.js"></script>
+
     <link rel="stylesheet" href="/file-browser/bootstrap.min.css">
     <link rel="stylesheet" href="/file-browser/font-awesome/css/font-awesome.min.css">
     <link rel="stylesheet" href="/file-browser/app.css">
-    <link rel="stylesheet" href="/wetty/app.css">
-  
     <!-- file-browser end -->
+    
+    <!-- Wetty includes -->
+    <script src="/wetty/socket.io/socket.io.js"></script>
+    <!-- Wetty end -->
 
-    <script>
+    <!-- MaasTerm includes -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
+    <script src="/tippyjs/tippy.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.12/handlebars.min.js"></script>
+    <script src="/lib/menuhandlers.js"></script>
 
-      var termVisibility = true;
-      var editorFileURL = "";
-      var environment = "";
+    <link rel="stylesheet" href="/css/app.css">
+    <!-- MaasTerm end -->
 
-      function loadEnvironment() {
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-          if (this.readyState == 4 && this.status == 200) {
-            // Load command environment definitions
-            //
-              try {
-                var response = JSON.parse(xhttp.responseText);
-
-                // Prepare environment substitutions
-                environment = response.environment;
-                for (var prop in environment) {
-                  if (environment.hasOwnProperty(prop)) {
-                    if (environment[prop].includes("file://")) {
-                      var fileRef = environment[prop].split("//")[1];
-                      console.log("Loading environment variable '" + prop + "' content from file: " + fileRef);
-                      
-                      var xhttp2 = new XMLHttpRequest();
-                      xhttp2.onreadystatechange = function() {
-                        if (this.readyState == 4 && this.status == 200) {
-                          // Replace environment variable contents with those from file
-                          //
-                          var template = Handlebars.compile(xhttp2.responseText);
-                          environment[prop] = template(environment);
-                        }
-                      };
-                      xhttp2.open("GET", "https://localhost:8089/b?f=" + fileRef.replace("/", "%2F"), true);
-                      xhttp2.send();
-                    }
-                  }
-                }
-
-              } catch (e) {
-                console.error("Error processing commands.json specification! " + e);
-                console.log("Error in content: " + xhttp.responseText);
-              }
-            }
-          };
-          xhttp.open("GET", "https://localhost:8089/b?f=commands.json", true);
-          xhttp.send();
-      }
-
-      function loadCommands() {
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-          if (this.readyState == 4 && this.status == 200) {
-            // Load commands menu
-            //
-            if (this.readyState == 4 && this.status == 200) {
-              try {
-                var response = JSON.parse(xhttp.responseText);
-                var data = environment;
-                var html = "";
-            
-                for (const submenu of response.menus) {
-                  html = '<li class="dropdown-submenu"><a class="test" href="#">'
-                    + submenu.submenu
-                    + '<span class="caret"></span></a><ul id="sub" class="dropdown-menu">';
-                  for (const cmd of submenu.commands) {
-                    var template = Handlebars.compile(cmd.shell);
-                  
-                    html += '<li><a tabindex="-1" href=\'#\' onclick=\"window.execCommand(\'' 
-                      + btoa(template(data))
-                      + '\');" >' 
-                      + cmd.description 
-                      + '</a></li>';
-                  }
-                  html += '</ul></li>';
-                  $('#Commands').append(html);
-                }
-
-                $('.dropdown-submenu a.test').on("click", function(e){
-                    $('ul.dropdown-menu #sub').hide();
-                    $(this).next('ul').toggle();
-                    
-                    e.stopPropagation();
-                    e.preventDefault();
-                  });
-                
-                maas_id = response.maas_id;
-                maas_instance_id = response.maas_instance_id;
-              } catch (e) {
-                console.error("Error processing commands.json specification! " + e);
-                console.log("Error in content: " + xhttp.responseText);
-              }
-            }
-          }
-        };
-        xhttp.open("GET", "https://localhost:8089/b?f=commands.json", true);
-        xhttp.send();
-      }
-
-      function loadEditorContent(fileUrl) {
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-              // Load Editor Content
-              //
-              var url = new URL(fileUrl);
-              var filePath = url.searchParams.get("f");
-              editorFileURL = filePath;
-              editor.session.setValue(xhttp.responseText);
-              showEditor();
-            }
-        };
-        xhttp.open("GET", fileUrl, true);
-        xhttp.send();
-      }
-
-      function showEditor() {
-        document.getElementById("terminal").style.visibility= 'hidden';
-        document.getElementById("editor").style.visibility= 'visible';
-        document.getElementById("editor").focus();
-        editor.focus();
-      }
-
-      function showTerm() {
-        document.getElementById("terminal").style.visibility= 'visible';
-        document.getElementById("editor").style.visibility= 'hidden';
-        document.getElementById("terminal").focus();
-      }
-
-      function hideAll() {
-        document.getElementById("editor").style.visibility= 'hidden';
-        document.getElementById("terminal").style.visibility= 'hidden';
-      }
-
-      function toggleTerm() {
-        termVisibility = termVisibility == false ? true : false;
-        if (termVisibility) {
-          showTerm();
-        } else {
-          showEditor();
-        }
-      }
-
-      function sshToTarget() {
-        let url = new URL(window.location.href);
-        let searchParams = new URLSearchParams(url.search);
-        term.io.sendString('ssh -i .ec2.pem ubuntu@' + searchParams.get('targetNode') + "\n");        
-        document.getElementById("terminal").focus();
-      }
-      function launchCLI() {
-        term.io.sendString('sudo docker exec -it solace bash -c "cd /usr/sw/loads/currentload/bin; cli -A" \n');
-        document.getElementById("terminal").focus();
-      }
-
-      function execCommand(cmd) {
-        $('ul.dropdown-menu #sub').hide();
-                    
-        showTerm();
-        term.io.sendString(atob(cmd).replace(/&#x27;/g, '\'').replace(/&quot;/g, '"'));  
-      }
-    </script>
-
-    <style>
-      html, body {
-        height: 100%;
-        width: 100%;
-        margin: 0px;
-      }
-      #overlay {
-        position: absolute;
-        height: 100%;
-        width: 100%;
-        background-color: rgba(0,0,0,0.75);;
-        display: none;
-        z-index: 100;
-      }
-      #overlay input {
-        display: inline;
-        margin: auto;
-        position: relative;
-        top: 50%;
-        transform: translateY(-50%);
-      }
-      #terminal {
-        top: 32px;
-        display: block;
-        position: absolute;
-        width: 100%;
-        height: 90%;
-      }
-      #editor {
-        top: 32px;
-        display: block;
-        position: absolute;
-        width: 100%;
-        height: 90%;
-      }
-      #utilbtn {
-        display: inline-block;
-        vertical-align: top;
-      }
-    </style>
   </head>
   <body>
 <!--    <button id="EditorHelpTip" class="btn" style="visibility: hidden" value="Editor Help" data-tippy="Cmd-E (Execute selection in Term), Cmd-O (Open URL / Search)">Help</button>-->
@@ -227,23 +34,33 @@
   CSS Drop-down menus
   https://www.w3schools.com/bootstrap/tryit.asp?filename=trybs_ref_js_dropdown_multilevel_css&stacked=h
 -->
+
+<span style="font-size: 1.5em; color: black;">
     <div class="dropdown">
-      <input type="button" data-toggle="dropdown" class="btn" value="Commands"/>
-      <input type="button" onclick="toggleTerm();" value="Terminal / Editor"/>
-
+      
+      <i data-toggle="dropdown" class="fas fa-bars fa-border"></i>
+      <i class="fas fa-terminal fa-border" onclick="showTerm();"></i>
+      <i class="fas fa-edit fa-border" onclick="showEditor();"></i>
+      <i class="fas fa-clipboard fa-border" onclick="editClipboard();"></i> 
+      <i class="fas fa-folder-open fa-border" onclick="hideAll();"></i> 
+      <i class="fas fa-cogs fa-border" onclick="loadEditorContent('https://localhost:8089/b?f=options.current');"></i> 
+      <i class="fas fa-external-link-alt fa-border" onclick="window.open('https://localhost:8088');"></i> 
+      
+      <!-- Menus -->
       <ul id="Commands" class="dropdown-menu">
-          <li><a href="#" onclick='loadEditorContent("https://localhost:8089/b?f=commands.json");'>Edit Commands</a></li>
-          <li><a href="#" onclick='hideAll();'>Browse Files</a></li>
+          <li class="dropdown-submenu">
+            <a class="test" href="#">Customize Terminal<span class="caret"></span></a>
+            <ul id="sub" class="dropdown-menu">
+              <li><a href="#" onclick='loadEditorContent("https://localhost:8089/b?f=commands.json");'>Edit Maas Environment</a></li>
+              <li><a href="#" >- - - - - - - - - - - - -</a></li>
+              <li><a href="#" onclick='resetEnvDefaults();'>Reset Environment</a></li>
+            </ul>
+          </li>
+          <li><a href="#" >- - - - - - - - - - - - -</a></li>
       </ul>
+        
     </div>
-
-    <script>
-      loadEnvironment();
-     
-      // Wait for loading of environment variable content from server
-      setTimeout(function(){ loadCommands(); }, 5000);
-    </script>
-
+    </span>
     <!-- file-browser section -->
       <div class="panel panel-default mainpanel">
         <div class="panel-heading">
@@ -270,128 +87,8 @@
     <div id="editor" style="visibility: hidden">Take some notes..</div>
     <script src="ace/src-min/ace.js" type="text/javascript" charset="utf-8"></script>
     <script src="ace/src-min/theme_tomorrow_night_blue.js" type="text/javascript" charset="utf-8"></script>
-    <script>
-
-        var maas_id = "unknown";
-        var maas_instance_id = "unknown";
-
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-              try {
-                var response = JSON.parse(xhttp.responseText);
-                maas_id = response.maas_id;
-                maas_instance_id = response.maas_instance_id;
-              } catch (e) {
-                console.error("Error processing Maas Terminal configuration " + e);
-                console.log("Maas configuration response: " + xhttp.responseText);
-              }
-            }
-        };
-        xhttp.open("GET", "/maas", true);
-        xhttp.send();
-
-        var editor = ace.edit("editor");
-        editor.setShowPrintMargin(false);
-        editor.setTheme("ace/theme/tomorrow_night_blue");
-
-        if (localStorage && localStorage.getItem('MaasTermNotes') != null) {
-          //editor.session.setValue(localStorage.getItem('MaasTermNotes'));
-        }
-
-        editor.commands.addCommand({
-            name: 'save',
-            bindKey: {win: "Ctrl-S", "mac": "Cmd-S"},
-            exec: function(editor) {
-              /*
-              console.log("Saving edits to local storage.", editor.session.getValue())
-              localStorage.setItem("MaasTermNotes", editor.getValue())
-              */
-
-              var xhttp = new XMLHttpRequest();
-              xhttp.onreadystatechange = function() {
-                  if (this.readyState == 4 && this.status == 200) {
-                    // Editor Content Saved
-                    //
-                    
-                  }
-              };
-              var content = editor.getSession().getValue();
-              var requestPath = "/savefile/" + editorFileURL.replace("/", "%2f");
-              xhttp.open("POST", requestPath, true);
-              xhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-              xhttp.send(content);
-            }
-        })
-        editor.commands.addCommand({
-            name: 'openURL',
-            bindKey: {win: "Ctrl-G", "mac": "Cmd-G"},
-            exec: function(editor) {
-              var selectedText = editor.getSession().doc.getTextRange(editor.selection.getRange());
-              const isUrl = string => {
-                try { 
-                  return Boolean(new URL(string)); }
-                catch(e) {
-                  return false; 
-                }
-              }
-              var destination = selectedText
-              if (! isUrl(selectedText)) {
-                // Do Google Search
-                destination = "https://google.com/search?q=" + encodeURI(selectedText);
-              }
-              var win = window.open(destination, '_blank');
-              win.focus();
-            }
-        })
-        editor.commands.addCommand({
-            name: 'execInTerm',
-            bindKey: {win: "Ctrl-E", "mac": "Cmd-E"},
-            exec: function(editor) {
-              var selectedText = editor.getSession().doc.getTextRange(editor.selection.getRange());
-              toggleTerm();
-              term.io.sendString(selectedText + "\n");        
-            }
-        })
-        editor.commands.addCommand({
-            name: 'toggleToTerm',
-            bindKey: {win: "Ctrl-T", "mac": "Cmd-T"},
-            exec: function(editor) {
-              toggleTerm();
-            }
-        })
-        editor.commands.addCommand({
-            name: 'showFileBrowser',
-            bindKey: {win: "Ctrl-O", "mac": "Cmd-O"},
-            exec: function(editor) {
-              hideAll();
-            }
-        })
-
-        editor.commands.addCommand({
-            name: 'toggleToTerm',
-            bindKey: {win: "Ctrl-K", "mac": "Cmd-K"},
-            exec: function(editor) {
-              var prepSearchQuery = /[{}\,\:\"]/g;
-              var selectedText = editor.getSession().doc.getTextRange(editor.selection.getRange());
-              search = selectedText.replace(prepSearchQuery, ' ');
-
-              var destination = "http://" 
-                + maas_id + "-" 
-                + maas_instance_id 
-                + "-monitoring.mymaas.net:5601/app/kibana#/discover"
-                + "?_g=()&_a=(columns:!(_source),index:'70405550-e1d8-11e8-8898-292d558882d5',interval:auto,query:(language:lucene,"
-                + "query:'maas_id:" 
-                + maas_id + "-" 
-                + maas_instance_id 
-                + "%20AND%20log:("
-                + encodeURI(search)
-                + ")'),sort:!(_score,desc))";
-
-              var win = window.open(destination, '_blank');
-              win.focus();
-            }
-        })
-    </script>
+    
+    <script src="/lib/initapp.js"></script>
+  
   </body>
 </html>

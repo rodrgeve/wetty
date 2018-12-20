@@ -32,8 +32,8 @@ app.post('/savefile/:fileName', (req, res) => {
   var body = '';
   
   var filePath = workingDir 
-    + "/termdata/"
-    + req.params.fileName.replace('%2f', '/');
+    + "/"
+    + req.params.fileName.replace('%2f', '/termdata/');
 
   console.log("Saving contents for file: " + filePath);
   
@@ -51,8 +51,8 @@ app.post('/savefile/:fileName', (req, res) => {
 // For serving css and javascript
 app.use('/', express.static(path.join(__dirname, 'public')));
 
-app.get('/maas/', (req, res) => {
-  res.sendFile(`${__dirname}/termdata/maas.conf`);
+app.get('/options', (req, res) => {
+  res.sendFile(`${__dirname}/termdata/options.current`);
 });
 
 function createServer(port, sslopts) {
